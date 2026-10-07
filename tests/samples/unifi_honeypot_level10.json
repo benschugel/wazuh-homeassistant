@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-10-05T02:28:59.983+0000",
+  "rule": {
+    "level": 10,
+    "description": "UniFi honeypot triggered by WAZUH-TEST (00:11:22:33:44:55)",
+    "id": "100102",
+    "firedtimes": 1,
+    "mail": false,
+    "groups": [
+      "unifi",
+      "attack",
+      "honeypot"
+    ]
+  },
+  "agent": {
+    "id": "000",
+    "name": "wazuh-manager"
+  },
+  "manager": {
+    "name": "wazuh-manager"
+  },
+  "id": "1791167339.762741",
+  "full_log": "Oct 04 21:28:59 gateway CEF:0|Ubiquiti|UniFi Network|10.6.106|202|Honeypot Triggered|6|UNIFIcategory=Security UNIFIhost=gateway UNIFIclientAlias=WAZUH-TEST UNIFIclientHostname=WAZUH-TEST UNIFIclientMac=00:11:22:33:44:55 UNIFIutcTime=2026-10-05T02:28:59.000Z msg=TEST notification from Wazuh setup, ignore.",
+  "predecoder": {
+    "program_name": "CEF",
+    "timestamp": "Oct 04 21:28:59",
+    "hostname": "gateway"
+  },
+  "decoder": {
+    "name": "unifi-cef"
+  },
+  "data": {
+    "protocol": "",
+    "action": "",
+    "srcip": "",
+    "srcport": "",
+    "dstport": "",
+    "unifi": {
+      "version": "10.6.106",
+      "event_id": "202",
+      "event_name": "Honeypot Triggered",
+      "severity": "6",
+      "category": "Security",
+      "client_alias": "WAZUH-TEST",
+      "msg": "TEST notification from Wazuh setup, ignore."
+    },
+    "srcmac": "00:11:22:33:44:55"
+  },
+  "location": "172.21.0.1"
+}

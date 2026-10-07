@@ -1,0 +1,10 @@
+{
+  "skip_groups": ["vulnerability-detector"],
+  "only_groups": [],
+  "skip_agents": [],
+  "cooldown_seconds": 300,
+  "burst_window_seconds": 60,
+  "burst_max": 5,
+  "dashboard_url": "https://wazuh.example.lan/app/threat-hunting#/overview/?tab=general&tabView=events&_a=(query:(language:kuery,query:'id:%22{alert_id}%22'))",
+  "timeout_seconds": 10
+}

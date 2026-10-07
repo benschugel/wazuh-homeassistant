@@ -1,0 +1,134 @@
+# Home Assistant package for Wazuh alerts.
+#
+# Install: copy to <config>/packages/wazuh.yaml and make sure configuration.yaml has
+#
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# Then replace the two placeholders below:
+#   REPLACE_WEBHOOK_ID   a long random string; the same one goes in the Wazuh <hook_url>
+#   notify.REPLACE_PHONE your mobile app notify service, e.g. notify.mobile_app_pixel_9
+#
+# What you get:
+#   automation  Wazuh alert webhook      receives the post, fires event wazuh_alert, notifies
+#   sensor      Wazuh last alert         description as state, full payload as attributes
+#   sensor      Wazuh alerts today       count, reset at midnight
+#   sensor      Wazuh suppressed today   alerts the integration held back (cooldown/burst)
+
+automation:
+  - id: wazuh_alert_webhook
+    alias: Wazuh alert webhook
+    description: Receive Wazuh alerts, fan out as an event, notify by severity.
+    mode: queued
+    max: 50
+    trigger:
+      - platform: webhook
+        webhook_id: REPLACE_WEBHOOK_ID
+        allowed_methods: [POST]
+        local_only: true
+    variables:
+      p: "{{ trigger.json }}"
+      is_critical: "{{ (p.level | int(0)) >= 12 }}"
+      details: >-
+        {%- set bits = [] -%}
+        {%- if p.process %}{% set bits = bits + ['process: ' ~ p.process.split('\\')[-1]] %}{% endif -%}
+        {%- if p.file %}{% set bits = bits + ['file: ' ~ p.file.split('\\')[-1]] %}{% endif -%}
+        {%- if p.srcip %}{% set bits = bits + ['from ' ~ p.srcip] %}{% endif -%}
+        {%- if p.user %}{% set bits = bits + ['user: ' ~ p.user] %}{% endif -%}
+        {%- if p.mitre_techniques %}{% set bits = bits + [p.mitre_techniques | join(', ')] %}{% endif -%}
+        {%- if p.suppressed_since_last | int(0) > 0 %}{% set bits = bits + ['+' ~ p.suppressed_since_last ~ ' held'] %}{% endif -%}
+        {{ bits | join(' · ') }}
+    action:
+      # 1. Fan out. Template sensors and other automations listen to this event.
+      - event: wazuh_alert
+        event_data: "{{ p }}"
+
+      # 2. Phone notification. Critical (level 12+) and bursts bypass Do Not Disturb.
+      - service: notify.REPLACE_PHONE
+        data:
+          title: "{{ p.title }}"
+          message: >-
+            {{ p.message }}{% if details %}
+            {{ details }}{% endif %}
+          data:
+            tag: "wazuh-{{ p.rule_id }}-{{ p.agent_id }}"
+            group: wazuh
+            channel: "{{ 'Wazuh critical' if is_critical or p.burst else 'Wazuh' }}"
+            importance: "{{ 'high' if is_critical or p.burst else 'default' }}"
+            ttl: 0
+            priority: high
+            notification_icon: mdi:shield-alert
+            color: "{{ '#d32f2f' if is_critical else '#f57c00' }}"
+            clickAction: "{{ p.dashboard_url | default('noAction') }}"
+            actions:
+              - action: URI
+                title: Open Wazuh
+                uri: "{{ p.dashboard_url | default('') }}"
+              - action: "WAZUH_ACK_{{ p.alert_id }}"
+                title: Acknowledge
+
+      # 3. Keep a copy in the HA notification drawer for critical alerts.
+      - if: "{{ is_critical }}"
+        then:
+          - service: persistent_notification.create
+            data:
+              notification_id: "wazuh-{{ p.alert_id }}"
+              title: "{{ p.title }}"
+              message: "{{ p.message }}  \n{{ details }}"
+
+  - id: wazuh_alert_acknowledged
+    alias: Wazuh alert acknowledged
+    description: Dismiss the drawer copy when the phone action is tapped.
+    trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+    condition: "{{ trigger.event.data.action.startswith('WAZUH_ACK_') }}"
+    action:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: "wazuh-{{ trigger.event.data.action[10:] }}"
+
+template:
+  - trigger:
+      - platform: event
+        event_type: wazuh_alert
+    sensor:
+      - name: Wazuh last alert
+        unique_id: wazuh_last_alert
+        icon: mdi:shield-alert
+        state: "{{ trigger.event.data.description | truncate(255) }}"
+        attributes:
+          level: "{{ trigger.event.data.level }}"
+          severity: "{{ trigger.event.data.severity }}"
+          rule_id: "{{ trigger.event.data.rule_id }}"
+          agent: "{{ trigger.event.data.agent }}"
+          groups: "{{ trigger.event.data.groups }}"
+          mitre: "{{ trigger.event.data.mitre_techniques }}"
+          srcip: "{{ trigger.event.data.srcip }}"
+          process: "{{ trigger.event.data.process }}"
+          file: "{{ trigger.event.data.file }}"
+          cve: "{{ trigger.event.data.cve }}"
+          alert_id: "{{ trigger.event.data.alert_id }}"
+          dashboard_url: "{{ trigger.event.data.dashboard_url | default('') }}"
+          received: "{{ now().isoformat() }}"
+
+  - trigger:
+      - platform: event
+        event_type: wazuh_alert
+        id: alert
+      - platform: time
+        at: "00:00:00"
+        id: reset
+    sensor:
+      - name: Wazuh alerts today
+        unique_id: wazuh_alerts_today
+        icon: mdi:counter
+        state_class: total
+        state: >-
+          {% if trigger.id == 'reset' %}0{% else %}{{ (this.state | int(0)) + 1 }}{% endif %}
+      - name: Wazuh suppressed today
+        unique_id: wazuh_suppressed_today
+        icon: mdi:bell-off
+        state_class: total
+        state: >-
+          {% if trigger.id == 'reset' %}0{% else %}{{ (this.state | int(0)) + (trigger.event.data.suppressed_since_last | int(0)) }}{% endif %}
