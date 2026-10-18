@@ -2,6 +2,11 @@
 
 Send Wazuh alerts to your phone through Home Assistant, without the flood.
 
+> **Status: work in progress.** The integration script runs in my homelab and
+> has tests. The Home Assistant package is a reference and is not what I run
+> today, so expect it to change. Payload fields and settings may still shift.
+> WIP until the package is what I run and the payload is frozen.
+
 Wazuh ships integrations for Slack, PagerDuty and Shuffle. This is the same
 idea for Home Assistant: a manager-side integration script that posts to a
 webhook, and a Home Assistant package that turns the post into a phone
