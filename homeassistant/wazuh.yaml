@@ -42,8 +42,11 @@ automation:
         {{ bits | join(' · ') }}
     actions:
       # 1. Fan out. Template sensors and other automations listen to this event.
+      #    event_data has to be a mapping, so the payload rides under "alert":
+      #    trigger.event.data.alert.level, trigger.event.data.alert.rule_id, ...
       - event: wazuh_alert
-        event_data: "{{ p }}"
+        event_data:
+          alert: "{{ p }}"
 
       # 2. Phone notification. Critical (level 12+) and bursts bypass Do Not Disturb.
       - action: notify.REPLACE_PHONE
@@ -99,20 +102,20 @@ template:
       - name: Wazuh last alert
         unique_id: wazuh_last_alert
         icon: mdi:shield-alert
-        state: "{{ trigger.event.data.description | truncate(255) }}"
+        state: "{{ trigger.event.data.alert.description | truncate(255) }}"
         attributes:
-          level: "{{ trigger.event.data.level }}"
-          severity: "{{ trigger.event.data.severity }}"
-          rule_id: "{{ trigger.event.data.rule_id }}"
-          agent: "{{ trigger.event.data.agent }}"
-          groups: "{{ trigger.event.data.groups }}"
-          mitre: "{{ trigger.event.data.mitre_techniques }}"
-          srcip: "{{ trigger.event.data.srcip }}"
-          process: "{{ trigger.event.data.process }}"
-          file: "{{ trigger.event.data.file }}"
-          cve: "{{ trigger.event.data.cve }}"
-          alert_id: "{{ trigger.event.data.alert_id }}"
-          dashboard_url: "{{ trigger.event.data.dashboard_url | default('') }}"
+          level: "{{ trigger.event.data.alert.level }}"
+          severity: "{{ trigger.event.data.alert.severity }}"
+          rule_id: "{{ trigger.event.data.alert.rule_id }}"
+          agent: "{{ trigger.event.data.alert.agent }}"
+          groups: "{{ trigger.event.data.alert.groups }}"
+          mitre: "{{ trigger.event.data.alert.mitre_techniques }}"
+          srcip: "{{ trigger.event.data.alert.srcip }}"
+          process: "{{ trigger.event.data.alert.process }}"
+          file: "{{ trigger.event.data.alert.file }}"
+          cve: "{{ trigger.event.data.alert.cve }}"
+          alert_id: "{{ trigger.event.data.alert.alert_id }}"
+          dashboard_url: "{{ trigger.event.data.alert.dashboard_url | default('') }}"
           received: "{{ now().isoformat() }}"
 
   - triggers:
@@ -134,4 +137,4 @@ template:
         icon: mdi:bell-off
         state_class: total
         state: >-
-          {% if trigger.id == 'reset' %}0{% else %}{{ (this.state | int(0)) + (trigger.event.data.suppressed_since_last | int(0)) }}{% endif %}
+          {% if trigger.id == 'reset' %}0{% else %}{{ (this.state | int(0)) + (trigger.event.data.alert.suppressed_since_last | int(0)) }}{% endif %}

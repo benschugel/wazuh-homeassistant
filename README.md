@@ -144,9 +144,11 @@ critical 15.
 
 The package gives you:
 
-- **`wazuh_alert` event** with the full payload, so other automations can
-  react (flash a light on critical, speak on a satellite) without touching
-  the webhook.
+- **`wazuh_alert` event** with the full payload under `alert`, so other
+  automations can react (flash a light on critical, speak on a satellite)
+  without touching the webhook. Read fields as
+  `trigger.event.data.alert.level`, `trigger.event.data.alert.rule_id` and so
+  on.
 - **Phone notification** with the alert, a one-line summary of process, file,
   source IP, user and MITRE technique, an "Open Wazuh" button when a
   dashboard link is configured, and an "Acknowledge" button. Level 12 and
