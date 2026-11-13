@@ -5,6 +5,8 @@
 #   homeassistant:
 #     packages: !include_dir_named packages
 #
+# Needs Home Assistant 2024.10 or newer (triggers/conditions/actions syntax).
+#
 # Then replace the two placeholders below:
 #   REPLACE_WEBHOOK_ID   a long random string; the same one goes in the Wazuh <hook_url>
 #   notify.REPLACE_PHONE your mobile app notify service, e.g. notify.mobile_app_pixel_9
@@ -21,8 +23,8 @@ automation:
     description: Receive Wazuh alerts, fan out as an event, notify by severity.
     mode: queued
     max: 50
-    trigger:
-      - platform: webhook
+    triggers:
+      - trigger: webhook
         webhook_id: REPLACE_WEBHOOK_ID
         allowed_methods: [POST]
         local_only: true
@@ -38,13 +40,13 @@ automation:
         {%- if p.mitre_techniques %}{% set bits = bits + [p.mitre_techniques | join(', ')] %}{% endif -%}
         {%- if p.suppressed_since_last | int(0) > 0 %}{% set bits = bits + ['+' ~ p.suppressed_since_last ~ ' held'] %}{% endif -%}
         {{ bits | join(' · ') }}
-    action:
+    actions:
       # 1. Fan out. Template sensors and other automations listen to this event.
       - event: wazuh_alert
         event_data: "{{ p }}"
 
       # 2. Phone notification. Critical (level 12+) and bursts bypass Do Not Disturb.
-      - service: notify.REPLACE_PHONE
+      - action: notify.REPLACE_PHONE
         data:
           title: "{{ p.title }}"
           message: >-
@@ -70,7 +72,7 @@ automation:
       # 3. Keep a copy in the HA notification drawer for critical alerts.
       - if: "{{ is_critical }}"
         then:
-          - service: persistent_notification.create
+          - action: persistent_notification.create
             data:
               notification_id: "wazuh-{{ p.alert_id }}"
               title: "{{ p.title }}"
@@ -79,18 +81,19 @@ automation:
   - id: wazuh_alert_acknowledged
     alias: Wazuh alert acknowledged
     description: Dismiss the drawer copy when the phone action is tapped.
-    trigger:
-      - platform: event
+    triggers:
+      - trigger: event
         event_type: mobile_app_notification_action
-    condition: "{{ trigger.event.data.action.startswith('WAZUH_ACK_') }}"
-    action:
-      - service: persistent_notification.dismiss
+    conditions:
+      - "{{ trigger.event.data.action.startswith('WAZUH_ACK_') }}"
+    actions:
+      - action: persistent_notification.dismiss
         data:
           notification_id: "wazuh-{{ trigger.event.data.action[10:] }}"
 
 template:
-  - trigger:
-      - platform: event
+  - triggers:
+      - trigger: event
         event_type: wazuh_alert
     sensor:
       - name: Wazuh last alert
@@ -112,11 +115,11 @@ template:
           dashboard_url: "{{ trigger.event.data.dashboard_url | default('') }}"
           received: "{{ now().isoformat() }}"
 
-  - trigger:
-      - platform: event
+  - triggers:
+      - trigger: event
         event_type: wazuh_alert
         id: alert
-      - platform: time
+      - trigger: time
         at: "00:00:00"
         id: reset
     sensor:

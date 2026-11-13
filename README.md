@@ -58,6 +58,9 @@ Edit the two placeholders in the file:
 
 Restart Home Assistant or reload automations and template entities.
 
+The package uses the `triggers` / `conditions` / `actions` syntax, so it needs
+Home Assistant 2024.10 or newer.
+
 ### 2. Wazuh manager
 
 Copy both files from `integrations/` to `/var/ossec/integrations/` on the
