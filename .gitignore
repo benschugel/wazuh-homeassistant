@@ -2,3 +2,18 @@ __pycache__/
 *.pyc
 *.state
 integrations/custom-homeassistant.json
+
+# Secrets, env files and local config: never commit
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+secrets.yml
+secrets.yaml
+*.pem
+*.key
+*.p12
+*.pfx
+*.local
+*.local.*
